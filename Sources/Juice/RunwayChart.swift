@@ -60,13 +60,15 @@ struct RunwayChart: View {
         Chart {
             ForEach(pluggedRuns.indices, id: \.self) { i in
                 ForEach(pluggedRuns[i], id: \.t) { s in
-                    AreaMark(x: .value("t", s.t), y: .value("p", s.percent), series: .value("s", "plugged \(i)"))
+                    AreaMark(x: .value("t", s.t), y: .value("p", s.percent), series: .value("s", "plugged \(i)"),
+                             stacking: .unstacked)
                         .foregroundStyle(Color.green.opacity(0.16))
                 }
             }
 
             ForEach(past, id: \.t) { s in
-                AreaMark(x: .value("t", s.t), y: .value("p", s.percent), series: .value("s", "past"))
+                AreaMark(x: .value("t", s.t), y: .value("p", s.percent), series: .value("s", "past"),
+                         stacking: .unstacked)
                     .foregroundStyle(.linearGradient(colors: [Self.ink.opacity(0.10), Self.ink.opacity(0)],
                                                      startPoint: .top, endPoint: .bottom))
                 LineMark(x: .value("t", s.t), y: .value("p", s.percent), series: .value("s", "past"))
