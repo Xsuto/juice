@@ -9,6 +9,7 @@ final class GlassPanel: NSPanel {
     static let margin: CGFloat = 24  // transparent room around the sheet for its shadow
 
     private var monitors: [Any] = []
+    private var spaceObserver: (any NSObjectProtocol)?
     private weak var anchor: NSStatusBarButton?
     private var idealSize: () -> NSSize = { .zero }
     var onClose: (() -> Void)?
@@ -77,7 +78,7 @@ final class GlassPanel: NSPanel {
         setFrameTopLeftPoint(NSPoint(x: x, y: top))
     }
 
-    // Close on a click anywhere else, or Escape.
+    // Close on a click anywhere else, Escape, or a switch to another Space.
     private func installMonitors() {
         removeMonitors()
         if let m = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown], handler: { [weak self] _ in
@@ -87,11 +88,18 @@ final class GlassPanel: NSPanel {
             if event.keyCode == 53 { MainActor.assumeIsolated { self?.dismiss() }; return nil }
             return event
         }) { monitors.append(m) }
+        spaceObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.dismiss() }
+        }
     }
 
     private func removeMonitors() {
         monitors.forEach(NSEvent.removeMonitor)
         monitors.removeAll()
+        if let spaceObserver { NSWorkspace.shared.notificationCenter.removeObserver(spaceObserver) }
+        spaceObserver = nil
     }
 }
 
