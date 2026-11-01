@@ -15,7 +15,7 @@ struct RunwayChart: View {
     private let start: Date
     private let end: Date
     private let past: [Sample]
-    private let pluggedRuns: [(Date, Date)]
+    private let pluggedRuns: [[Sample]]
 
     init(samples: [Sample], now: Date, percent: Int, pluggedIn: Bool,
          projection: Projection?, progress: Double) {
@@ -58,10 +58,11 @@ struct RunwayChart: View {
 
     private var chart: some View {
         Chart {
-            ForEach(pluggedRuns, id: \.0) { run in
-                RectangleMark(xStart: .value("t", run.0), xEnd: .value("t", run.1),
-                              yStart: .value("p", 0), yEnd: .value("p", 100))
-                    .foregroundStyle(Color.green.opacity(0.16))
+            ForEach(pluggedRuns.indices, id: \.self) { i in
+                ForEach(pluggedRuns[i], id: \.t) { s in
+                    AreaMark(x: .value("t", s.t), y: .value("p", s.percent), series: .value("s", "plugged \(i)"))
+                        .foregroundStyle(Color.green.opacity(0.16))
+                }
             }
 
             ForEach(past, id: \.t) { s in
@@ -198,15 +199,16 @@ struct RunwayChart: View {
 
     // MARK: - Data
 
-    /// Contiguous stretches on AC power, for the green bands.
-    private static func runs(in past: [Sample]) -> [(Date, Date)] {
-        var runs: [(Date, Date)] = []
-        var runStart: Date?
+    /// Contiguous stretches on AC power, for the green fill under the line. Each run includes the
+    /// sample that ends it, so the fill reaches the point where the charger was unplugged.
+    private static func runs(in past: [Sample]) -> [[Sample]] {
+        var runs: [[Sample]] = []
+        var runStart: Int?
         for (i, s) in past.enumerated() {
-            if s.pluggedIn, runStart == nil { runStart = s.t }
-            let next = i + 1 < past.count ? past[i + 1] : nil
-            if let rs = runStart, !(next?.pluggedIn ?? false) {
-                runs.append((rs, next?.t ?? s.t))
+            if s.pluggedIn, runStart == nil { runStart = i }
+            let hasNext = i + 1 < past.count
+            if let rs = runStart, !(hasNext && past[i + 1].pluggedIn) {
+                runs.append(Array(past[rs...(hasNext ? i + 1 : i)]))
                 runStart = nil
             }
         }
